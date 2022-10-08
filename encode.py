@@ -34,14 +34,14 @@ def decode(message: bytes):
     byte_port= message[8:12]
     IPaddress = decodeAddress(byte_address)
     if IPaddress == "":
-        return None
+        return None, None, None
     port = decodePort(byte_port)
     if port == "":
-        return None
+        return None, None, None
     address = (IPaddress,port)
     operation = decodeOperation(message[12:13])
     if operation == "":
-        return None
+        return None, None, None
     return address,operation,message[13:]
 
 

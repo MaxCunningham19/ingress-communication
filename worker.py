@@ -2,10 +2,11 @@
 import socket
 from encode import decode
 from encode import encode
+import constants as cons
 
 
-host = socket.getfqdn()
-localIP     = "pworker" #socket.gethostbyname(host)
+server_address    = ("pserver",50000)
+localIP     = socket.gethostbyname(socket.gethostname)
 localPort   = 50000
 bufferSize  = 1024
 
@@ -15,7 +16,15 @@ UDPWorkerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 # Bind to address and ip
 UDPWorkerSocket.bind((localIP, localPort))
 
-print("UDP worker up and listening @",host,  localIP, localPort)
+connecting = True
+while connecting:
+    UDPWorkerSocket.sendto(encode((localIP,localPort),b'0',cons.WORKER),server_address)
+    bytesAddressPair = UDPWorkerSocket.recvfrom(bufferSize)
+    address, operation, message = decode(bytesAddressPair[0])
+    if address is not None:
+        if cons.isACK(operation):
+            print("UDP worker up and listening @",  localIP, localPort)
+            connecting = False
 
 # Listen for incoming datagrams
 while(True):
@@ -29,9 +38,9 @@ while(True):
     print(serverIP)
 
     destAddress,input, message = decode(message)
-
-    clientIP = "Client Ip Address:{}".format(destAddress)
-    print(clientIP)
-    message = encode(destAddress, message,False)
-    print("worker sending",message,"to server")
-    UDPWorkerSocket.sendto(message,address)
+    if destAddress is not None:
+        clientIP = "Client Ip Address:{}".format(destAddress)
+        print(clientIP)
+        message = encode(destAddress, message,False)
+        print("worker sending",message,"to server")
+        UDPWorkerSocket.sendto(message,address)
