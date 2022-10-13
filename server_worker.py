@@ -1,5 +1,6 @@
+from typing import Union
 class Worker:
-    def __init__(self,address:tuple(str,int),busy: bool):
+    def __init__(self, address,busy: bool):
         self.address = address
         self.busy = busy
 
@@ -12,5 +13,5 @@ class Worker:
     def recieved(self):
         self.busy = False
 
-    def isAddress(self,address:tuple(str,int))->bool:
+    def isAddress(self,address)->bool:
         return self.address[0] == address[0] and self.address[1] == address[1]

@@ -1,28 +1,33 @@
 # based on https://pythontic.com/modules/socket/udp-client-server-example
-from statistics import mean
 from typing import List
 import socket
+import time
 import constants as cons
 from encode import encode
 from encode import decode
 import server_worker as swork
 
-localIP     = "pserver" #socket.gethostbyname(socket.gethostname())
+localIP     = "pserver"
 localPort   = 50000
 bufferSize  = 1024
 
-msgFromServer       = "Hello From Server"
-
+msgFromServer  = "Hello From Server"
 workers: List[swork.Worker] = []
 
+def add_worker(workers:List[swork.Worker],address)->bool:
+    for i in range(len(workers)):
+        if workers[i].isAddress(address):
+            return False
+    return True
+
 def select_worker(workers:List[swork.Worker])->int:
-    for i in range(workers):
+    for i in range(len(workers)):
         if not workers[i].isBusy():
             return i
     return -1
 
-def get_worker(workers:List[swork.Worker],address:tuple(str,int))->int:
-    for i in range(workers):
+def get_worker(workers:List[swork.Worker],address)->int:
+    for i in range(len(workers)):
         if workers[i].isAddress(address):
             return i
     return -1
@@ -32,7 +37,6 @@ UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 
 # Bind to address and ip
 UDPServerSocket.bind((localIP, localPort))
-
 print("UDP server up and listening @", UDPServerSocket.getsockname())
 
 
@@ -42,20 +46,26 @@ while(True):
     message = bytesAddressPair[0]
     address = bytesAddressPair[1]
 
-    origAddress, input, message = decode(message)
+    hasAddress, origAddress, input, message = decode(message)
+    print(hasAddress, origAddress, input, message)
+  
 
     if message is not None:
         if cons.isAddWorker(input):
-            workerMsg = "Adding Worker "+address[0]+" : "+str(address[1])
-            print(workerMsg)
-            workers.append(swork.Worker(address,False))
-            UDPServerSocket.sendto(encode(origAddress,message,cons.ACK),address)
+            if add_worker(workers, address):
+                workers.append(swork.Worker(address,False))
+                workerMsg = "Adding Worker "+address[0]+" : "+str(address[1])
+                print(workerMsg)
+            time.sleep(2)
+            message = encode(True, origAddress, message,cons.ACK)
+            UDPServerSocket.sendto(message ,origAddress)
+            print("sent ACK to worker @", origAddress)
         elif cons.isGet(input):
             index = select_worker(workers)
             if index == -1:
-                UDPServerSocket.sendto(encode(origAddress,message,cons.BUSY),address)
+                UDPServerSocket.sendto(encode(True, origAddress,message,cons.BUSY),address)
             else:
-                UDPServerSocket.sendto(encode(origAddress,message,cons.GET),workers[index].address)
+                UDPServerSocket.sendto(encode(True, origAddress,message,cons.GET),workers[index].address)
         elif cons.isResp(input):
             index = get_worker(workers,address)
             if index == -1:

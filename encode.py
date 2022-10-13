@@ -3,8 +3,13 @@ import ipaddress as ip
 
 address_length = 8
 
-def encode(originalAddress: tuple[str, int], file: bytes | str, op: str):
+def encode(addressIsSet:bool,originalAddress: tuple[str, int], file: bytes | str, op: str):
     bytesToSend = []
+
+    if addressIsSet:
+        bytesToSend.append(b'1')
+    else:
+        bytesToSend.append(b'0')
 
     byteAddress, bytePort = encodeAddress(originalAddress)
     bytesToSend.append(byteAddress)
@@ -22,27 +27,34 @@ def encode(originalAddress: tuple[str, int], file: bytes | str, op: str):
 
 
 def encodeAddress(address: tuple[str, int]):
-    bytesAdrs = ip.IPv4Address(address[0]).packed.hex()
-    print(address[1])
+    bytesAdrs = bytes(address[0],'utf-8').hex()
     bytesPort = address[1].to_bytes(2,'big').hex()
-    print(bytesPort)
     return bytes(bytesAdrs,'utf-8'), bytes(bytesPort,'utf-8')
 
 
 def decode(message: bytes):
-    byte_address = message[:8]
-    byte_port= message[8:12]
-    IPaddress = decodeAddress(byte_address)
-    if IPaddress == "":
-        return None, None, None
-    port = decodePort(byte_port)
-    if port == "":
-        return None, None, None
-    address = (IPaddress,port)
-    operation = decodeOperation(message[12:13])
+    hasAdrs = False
+    hasAdrs_byte = message[0:1]
+    if hasAdrs_byte == b'1':
+        hasAdrs = True
+
+    address = cons.NOT_ADDRESS
+    if hasAdrs:
+        byte_address = message[1:9]
+        byte_port= message[9:13]
+        IPaddress = decodeAddress(byte_address)
+        if IPaddress == "":
+            return None, None, None, None
+        port = decodePort(byte_port)
+        if port == "":
+            return None, None, None, None
+        address = (IPaddress,port)
+    
+    operation = decodeOperation(message[13:14])
     if operation == "":
-        return None, None, None
-    return address,operation,message[13:]
+        return None, None, None, None
+    return hasAdrs, address, operation,message[14:]
+
 
 
 def decodeOperation(byt:bytes):
@@ -59,13 +71,7 @@ def decodePort(byte_port):
 def decodeAddress(byte_address:bytes):
     if len(byte_address) != address_length:
         return ""
-    i = 0
-    address = ""
-    while i<3:
-        address = address + getDecimal(byte_address[i*2:i*2+2])+ "."
-        print(address)
-        i = i + 1
-    address = address + getDecimal(byte_address[len(byte_address)-2:])
+    address = bytes.fromhex(str(int(byte_address,base=16))).decode('utf-8')
     return address 
 
 def getDecimal(byt:bytes):

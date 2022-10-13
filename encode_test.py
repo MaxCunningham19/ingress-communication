@@ -8,8 +8,9 @@ class Test:
         self.output = output
 
 class inp:
-    def __init__(self,originalAddress: tuple[str, int], file: bytes | str, input: cons.OP):
+    def __init__(self,hasAdrs:bool,originalAddress: tuple[str, int], file: bytes | str, input: cons.OP):
         self.adrs = originalAddress
+        self.hasAdrs = hasAdrs
         self.file = file
         self.input = input
 
@@ -26,13 +27,17 @@ def test_encodeAddress()->None:
     assert (hasFail==False)
     
 
+def test_enctode():
+    input = (True,("172.20.0.0",1),"file",cons.WORKER)
+    assert (input==enc.decode(enc.encode(input[0],input[1],input[2],input[3])))
+
 
 def test_encode()->None:
-    tests = [Test("add Worker",inp(("172.20.0.0",1),"file",cons.WORKER),b'ac14000000010file')]
+    tests = [Test("add Worker",inp(True,("172.20.0.0",1),"file",cons.WORKER),b'1ac14000000010file')]
 
     hasFail = False
     for test in tests:
-        result = enc.encode(test.input.adrs,test.input.file,test.input.input)
+        result = enc.encode(test.input.hasAdrs,test.input.adrs,test.input.file,test.input.input)
         if result != test.output:
             print("Test",test.name,"failed expected:",test.output,"got:",result)
             hasFail = True
@@ -79,7 +84,7 @@ def test_decodePort()->None:
     assert (hasFail==False)
     
 def test_decode()->None:
-    tests = [Test("add Worker decoded",b'ac14000000010file',(("172.20.0.0",1),cons.WORKER,b'file'))]
+    tests = [Test("add Worker decoded",b'1ac14000000010file',(True,("172.20.0.0",1),cons.WORKER,b'file'))]
 
     hasFail = False
     for test in tests:
