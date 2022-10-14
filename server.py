@@ -11,6 +11,7 @@ localIP     = "pserver"
 localPort   = 50000
 bufferSize  = 1024
 
+
 msgFromServer  = "Hello From Server"
 workers: List[swork.Worker] = []
 
@@ -46,8 +47,8 @@ while(True):
     message = bytesAddressPair[0]
     address = bytesAddressPair[1]
 
-    hasAddress, origAddress, input, message = decode(message)
-    print(hasAddress, origAddress, input, message)
+    origAddress, input, message = decode(message)
+    print(origAddress, input, message)
   
 
     if message is not None:
@@ -57,15 +58,15 @@ while(True):
                 workerMsg = "Adding Worker "+address[0]+" : "+str(address[1])
                 print(workerMsg)
             time.sleep(2)
-            message = encode(True, origAddress, message,cons.ACK)
-            UDPServerSocket.sendto(message ,origAddress)
+            message = encode(origAddress, message,cons.ACK)
+            UDPServerSocket.sendto(message ,(socket.gethostbyname(origAddress[0]),origAddress[1]))
             print("sent ACK to worker @", origAddress)
         elif cons.isGet(input):
             index = select_worker(workers)
             if index == -1:
-                UDPServerSocket.sendto(encode(True, origAddress,message,cons.BUSY),address)
+                UDPServerSocket.sendto(encode(origAddress,message,cons.BUSY),address)
             else:
-                UDPServerSocket.sendto(encode(True, origAddress,message,cons.GET),workers[index].address)
+                UDPServerSocket.sendto(encode(origAddress,message,cons.GET),workers[index].address)
         elif cons.isResp(input):
             index = get_worker(workers,address)
             if index == -1:
