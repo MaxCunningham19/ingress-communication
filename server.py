@@ -15,6 +15,19 @@ bufferSize  = 1024
 msgFromServer  = "Hello From Server"
 workers: List[swork.Worker] = []
 
+def recieve(UDPSocket: socket.socket):
+    print("waiting to recieve messages")
+    while True:
+        try:
+            bytesAddressPair = UDPSocket.recvfrom(bufferSize)
+            message = bytesAddressPair[0]
+            address = bytesAddressPair[1]
+            origAddress, input, message = decode(message)
+            return origAddress, input, message, address
+        except:
+            continue
+
+
 def add_worker(workers:List[swork.Worker],address)->bool:
     for i in range(len(workers)):
         if workers[i].isAddress(address):
@@ -43,14 +56,8 @@ print("UDP server up and listening @", UDPServerSocket.getsockname())
 
 # Listen for incoming datagrams
 while(True):        
-    bytesAddressPair = UDPServerSocket.recvfrom(bufferSize)
-    message = bytesAddressPair[0]
-    address = bytesAddressPair[1]
-
-    origAddress, input, message = decode(message)
-    print(origAddress, input, message)
-  
-
+    origAddress, input, message, address = recieve(UDPServerSocket)
+    origAddress = (socket.gethostbyname(origAddress[0]),origAddress[1])
     if message is not None:
         if cons.isAddWorker(input):
             if add_worker(workers, address):
@@ -59,7 +66,7 @@ while(True):
                 print(workerMsg)
             time.sleep(2)
             message = encode(origAddress, message,cons.ACK)
-            UDPServerSocket.sendto(message ,(socket.gethostbyname(origAddress[0]),origAddress[1]))
+            UDPServerSocket.sendto(message , origAddress)
             print("sent ACK to worker @", origAddress)
         elif cons.isGet(input):
             index = select_worker(workers)
@@ -74,14 +81,10 @@ while(True):
             else:
                 UDPServerSocket.sendto(encode(address,message,cons.RESP),origAddress)
         elif cons.isACK(input):
-            index = get_worker(workers,address)
-            if index == -1:
-                UDPServerSocket.sendto(encode(address,message,cons.ACK),origAddress)
-            else:
-                UDPServerSocket.sendto(encode(address,message,cons.ACK),origAddress)
+            UDPServerSocket.sendto(encode(address,message,cons.ACK),origAddress)
         else:
             print(input, "cannot be handled by the sever")
             UDPServerSocket.sendto(encode(origAddress,message,cons.REJ),address)
     else:
-        print("cannot handle address or port given in incorrect form\n")
+        print("cannot handle address or port given in incorrect form")
 
