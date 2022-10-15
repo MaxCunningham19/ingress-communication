@@ -9,22 +9,21 @@ def recieve(UDPSocket: socket.socket):
     while True:
         try:
             bytesAddressPair = UDPSocket.recvfrom(bufferSize)
-            message = bytesAddressPair[0]
+            byte_message = bytesAddressPair[0]
             address = bytesAddressPair[1]
-            origAddress, input, message = decode(message)
-            return origAddress, input, message, address
+            origAddress, input, message_decoded = decode(byte_message)
+            return origAddress, input, message_decoded, address
         except:
             continue
 
 
-def send(UDPSocket: socket.socket, origAddress, message:str|bytes, op:str):
+def send(UDPSocket: socket.socket, origAddress, message_p:str|bytes, op:str):
     while True:
         try:
-            message = encode(origAddress, message, op)
-            print("client sending", message, "to server")
-            UDPSocket.sendto(message, server_address)
+            msg = encode(origAddress, message_p, op)
+            UDPSocket.sendto(msg, server_address)
             bytesAddressPair = UDPSocket.recvfrom(bufferSize)
-            origAddress, operation, message = decode(bytesAddressPair[0])
+            origAddress, operation, msg = decode(bytesAddressPair[0])
             if origAddress is not None:
                 if cons.isACK(operation):
                     return
@@ -46,7 +45,4 @@ UDPClientSocket.settimeout(3.0)
 # Send to server using created UDP socket
 print("sending to server @",server_address)
 send(UDPClientSocket, UDPClientSocket.getsockname(),msgFromClient,cons.GET)
-
-origAddress, op, message, address = recieve(UDPClientSocket)
-print(origAddress, op, message, address)
-send(UDPClientSocket, UDPClientSocket.getsockname(),msgFromClient,cons.ACK)
+print("recieved ack")

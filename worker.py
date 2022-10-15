@@ -36,7 +36,6 @@ def send(UDPWorkerSocket: socket.socket, origAddress, msg:str|bytes, op:str):
     while True:
         try:
             sending = encode(origAddress, msg, op)
-            print("worker sending", sending, "to server")
             UDPWorkerSocket.sendto(sending, server_address)
             bytesAddressPair = UDPWorkerSocket.recvfrom(bufferSize)
             origAdrs, oper, _ = decode(bytesAddressPair[0])
@@ -45,6 +44,7 @@ def send(UDPWorkerSocket: socket.socket, origAddress, msg:str|bytes, op:str):
                     return
         except:
             continue
+
 
 
 dockername = input("docker container name: ")
@@ -67,8 +67,10 @@ print("connected to server")
 while (True):
     try:
         origAddress, op, message, address = recieve(UDPWorkerSocket)
+        print(origAddress, op, message, address)
         if origAddress is not None and cons.isGet(op):
-            send(UDPWorkerSocket,origAddress,"hey",cons.RESP)
+            msg_to_send = encode(origAddress,"recieved:"+str(message,'utf-8'),cons.ACK)
+            UDPWorkerSocket.sendto(msg_to_send, server_address)
         else:
             print("worker recived invalid message")
             encode(origAddress, message, cons.REJ)

@@ -74,13 +74,13 @@ while(True):
                 UDPServerSocket.sendto(encode(origAddress,message,cons.BUSY),address)
             else:
                 UDPServerSocket.sendto(encode(origAddress,message,cons.GET),workers[index].address)
+                workers[index].busy = True
         elif cons.isResp(input):
-            index = get_worker(workers,address)
-            if index == -1:
-                UDPServerSocket.sendto(encode(origAddress,message,cons.REJ),address)
-            else:
-                UDPServerSocket.sendto(encode(address,message,cons.RESP),origAddress)
+            UDPServerSocket.sendto(encode(address,message,cons.RESP),origAddress)
         elif cons.isACK(input):
+            index = get_worker(workers,address)
+            if index != -1 :
+                workers[index].busy = False
             UDPServerSocket.sendto(encode(address,message,cons.ACK),origAddress)
         else:
             print(input, "cannot be handled by the sever")
