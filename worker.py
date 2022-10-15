@@ -11,7 +11,7 @@ def connect(UDPWorkerSocket: socket.socket, worker_adrs):
         UDPWorkerSocket.sendto(msg, server_address)
         try:
             bytesAddressPair = UDPWorkerSocket.recvfrom(bufferSize)
-            origAddress, operation, _ = decode(bytesAddressPair[0])
+            origAddress, operation, _ , _ = decode(bytesAddressPair[0])
             if origAddress is not None:
                 if cons.isACK(operation):
                     return
@@ -26,8 +26,8 @@ def recieve(UDPWorkerSocket: socket.socket):
             bytesAddressPair = UDPWorkerSocket.recvfrom(bufferSize)
             message = bytesAddressPair[0]
             address = bytesAddressPair[1]
-            origAddress, input, msg = decode(message)
-            return origAddress, input, msg, address
+            origAddress, input, msg, num = decode(message)
+            return origAddress, input, msg, num, address
         except:
             continue
 
@@ -38,7 +38,7 @@ def send(UDPWorkerSocket: socket.socket, origAddress, msg:str|bytes, op:str):
             sending = encode(origAddress, msg, op)
             UDPWorkerSocket.sendto(sending, server_address)
             bytesAddressPair = UDPWorkerSocket.recvfrom(bufferSize)
-            origAdrs, oper, _ = decode(bytesAddressPair[0])
+            origAdrs, oper, _, _ = decode(bytesAddressPair[0])
             if origAdrs is not None:
                 if cons.isACK(oper):
                     return
@@ -66,10 +66,10 @@ print("connected to server")
 # Listen for incoming datagrams
 while (True):
     try:
-        origAddress, op, message, address = recieve(UDPWorkerSocket)
+        origAddress, op, message, num, address = recieve(UDPWorkerSocket)
         print(origAddress, op, message, address)
         if origAddress is not None and cons.isGet(op):
-            msg_to_send = encode(origAddress,"recieved:"+str(message,'utf-8'),cons.ACK)
+            msg_to_send = encode(origAddress,"recieved:"+str(message,'utf-8'),cons.ACK, 0)
             UDPWorkerSocket.sendto(msg_to_send, server_address)
         else:
             print("worker recived invalid message")
