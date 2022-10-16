@@ -32,11 +32,8 @@ def encodeAddress(address: tuple[str, int]):
 
 def encodeNumber(number:int):
     number = number % 16
-    print(number)
     number_hex = hex(number)
-    print(number_hex)
     bytesNum = number_hex[2].encode('utf-8')
-    print(bytesNum)
     return bytesNum
 
 

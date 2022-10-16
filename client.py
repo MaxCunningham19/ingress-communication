@@ -1,5 +1,6 @@
 # based on https://pythontic.com/modules/socket/udp-client-server-example
 import socket
+from typing import List
 import constants as cons
 from encode import encode
 from encode import decode
@@ -13,21 +14,53 @@ def recieve(UDPSocket: socket.socket):
             address = bytesAddressPair[1]
             origAddress, input, message_decoded = decode(byte_message)
             return origAddress, input, message_decoded, address
-        except:
+        except TimeoutError:
             continue
 
 
-def send(UDPSocket: socket.socket, origAddress, message_p:str|bytes, op:str):
+def send(UDPSocket: socket.socket, origAddress, message_p:bytes,):
+    response: List[bytes] = []
+    curNum = 0
     while True:
         try:
-            msg = encode(origAddress, message_p, op)
+            msg = encode(origAddress, message_p, cons.GET, curNum)
             UDPSocket.sendto(msg, server_address)
             bytesAddressPair = UDPSocket.recvfrom(bufferSize)
-            origAddress, operation, msg = decode(bytesAddressPair[0])
+            origAddress, operation, resp_msg, num = decode(bytesAddressPair[0])
+            print(origAddress, operation, resp_msg, num)
+            if origAddress is not None:
+                if cons.isResp(operation):
+                    if curNum == num:
+                        response.append(resp_msg)
+                        curNum = (curNum + 1)%16 
+                        msg = encode(origAddress, resp_msg, cons.ACK, num)
+                        UDPSocket.sendto(msg, server_address)
+                        break 
+        except TimeoutError:
+            continue
+
+
+    while True:
+        try:
+            bytesAddressPair = UDPSocket.recvfrom(bufferSize)
+            origAddress, operation, resp_msg, num = decode(bytesAddressPair[0])
+            print(origAddress, operation, resp_msg, num)
             if origAddress is not None:
                 if cons.isACK(operation):
-                    return
-        except:
+                    msg = encode(origAddress, resp_msg, cons.ACK, num)
+                    UDPSocket.sendto(msg, server_address)
+                    res = bytes.join(b'',response)
+                    return res
+                if cons.isResp(operation):
+                    if curNum == num:
+                        response.append(resp_msg)
+                        curNum = (curNum + 1)%16 
+                    elif num<curNum:
+                        msg = encode(origAddress, resp_msg, cons.ACK, num)
+                        UDPSocket.sendto(msg, server_address)
+                    else :
+                        return "error client worker connection broke"
+        except TimeoutError:
             continue
 
 msgFromClient       = "filename.txt"
@@ -44,5 +77,18 @@ UDPClientSocket.settimeout(3.0)
 
 # Send to server using created UDP socket
 print("sending to server @",server_address)
-send(UDPClientSocket, UDPClientSocket.getsockname(),msgFromClient,cons.GET)
-print("recieved ack")
+res = send(UDPClientSocket, UDPClientSocket.getsockname(),msgFromClient)
+print("recieved ack", res)
+
+while(True):
+    while True:
+        try:
+            bytesAddressPair = UDPClientSocket.recvfrom(bufferSize)
+            origAddress, operation, resp_msg, num = decode(bytesAddressPair[0])
+            print(origAddress, operation, resp_msg, num)
+            if origAddress is not None:
+                if cons.isACK(operation):
+                    msg = encode(origAddress, resp_msg, cons.ACK, num)
+                    UDPClientSocket.sendto(msg, server_address)
+        except TimeoutError:
+            continue

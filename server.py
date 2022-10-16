@@ -16,15 +16,14 @@ msgFromServer  = "Hello From Server"
 workers: List[swork.Worker] = []
 
 def recieve(UDPSocket: socket.socket):
-    print("waiting to recieve messages")
     while True:
         try:
             bytesAddressPair = UDPSocket.recvfrom(bufferSize)
             message = bytesAddressPair[0]
             address = bytesAddressPair[1]
-            origAddress, input, message = decode(message)
-            return origAddress, input, message, address
-        except:
+            origAddress, input, message, num = decode(message)
+            return origAddress, input, message,num, address
+        except TimeoutError:
             continue
 
 
@@ -56,35 +55,36 @@ print("UDP server up and listening @", UDPServerSocket.getsockname())
 
 # Listen for incoming datagrams
 while(True):        
-    origAddress, input, message, address = recieve(UDPServerSocket)
+    origAddress, input, message, num, address = recieve(UDPServerSocket)
     origAddress = (socket.gethostbyname(origAddress[0]),origAddress[1])
     if message is not None:
         if cons.isAddWorker(input):
             if add_worker(workers, address):
                 workers.append(swork.Worker(address,False))
-                workerMsg = "Adding Worker "+address[0]+" : "+str(address[1])
+                workerMsg = "Adding Worker "+ address[0] +" : "+ str(address[1])
                 print(workerMsg)
-            time.sleep(2)
-            message = encode(origAddress, message,cons.ACK)
+            message = encode(origAddress, message,cons.ACK,num)
             UDPServerSocket.sendto(message , origAddress)
             print("sent ACK to worker @", origAddress)
         elif cons.isGet(input):
             index = select_worker(workers)
             if index == -1:
-                UDPServerSocket.sendto(encode(origAddress,message,cons.BUSY),address)
+                UDPServerSocket.sendto(encode(origAddress,message,cons.BUSY,num),address)
             else:
-                UDPServerSocket.sendto(encode(origAddress,message,cons.GET),workers[index].address)
+                print("establishing connection between",workers[index].address,"and",address)
+                UDPServerSocket.sendto(encode(origAddress,message,cons.GET,num),workers[index].address)
                 workers[index].busy = True
         elif cons.isResp(input):
-            UDPServerSocket.sendto(encode(address,message,cons.RESP),origAddress)
+            UDPServerSocket.sendto(encode(address,message,cons.RESP,num),origAddress)
         elif cons.isACK(input):
             index = get_worker(workers,address)
             if index != -1 :
                 workers[index].busy = False
-            UDPServerSocket.sendto(encode(address,message,cons.ACK),origAddress)
+                print("closing connection between",workers[index].address,"and",origAddress)
+            UDPServerSocket.sendto(encode(address,message,cons.ACK,num),origAddress)
         else:
             print(input, "cannot be handled by the sever")
-            UDPServerSocket.sendto(encode(origAddress,message,cons.REJ),address)
+            UDPServerSocket.sendto(encode(origAddress,message,cons.REJ,num),address)
     else:
         print("cannot handle address or port given in incorrect form")
 
