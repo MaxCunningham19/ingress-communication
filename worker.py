@@ -42,7 +42,7 @@ def respond(UDPWorkerSocket: socket.socket, origAddress, msg:str|bytes):
                 UDPWorkerSocket.sendto(sending, server_address)
                 bytesAddressPair = UDPWorkerSocket.recvfrom(bufferSize)
                 origAdrs, oper, mes, num = decode(bytesAddressPair[0])
-                print(origAdrs, oper, mes, num)
+                print(origAdrs, oper, num)
                 if origAdrs is not None:
                     if cons.isACK(oper) and num == (i%16):
                         break
@@ -55,7 +55,7 @@ def respond(UDPWorkerSocket: socket.socket, origAddress, msg:str|bytes):
             UDPWorkerSocket.sendto(sending, server_address)
             bytesAddressPair = UDPWorkerSocket.recvfrom(bufferSize)
             origAdrs, oper, mes, num = decode(bytesAddressPair[0])
-            print(origAdrs, oper, mes, num)
+            print(origAdrs, oper, num)
             if origAdrs is not None:
                 if cons.isACK(oper) and num==len(response)%16:
                     return

@@ -30,10 +30,10 @@ def send(UDPSocket: socket.socket, origAddress, message_p:bytes,):
             if origAddress is not None:
                 if cons.isResp(operation):
                     if curNum == num:
-                        print(origAddress, operation, resp_msg, num)
+                        print(origAddress, operation, num)
                         response.append(resp_msg)
                         curNum = (curNum + 1)%16 
-                        msg = encode(origAddress, resp_msg, cons.ACK, num)
+                        msg = encode(origAddress, '', cons.ACK, num)
                         UDPSocket.sendto(msg, server_address)
                         break 
         except TimeoutError:
@@ -45,9 +45,9 @@ def send(UDPSocket: socket.socket, origAddress, message_p:bytes,):
             bytesAddressPair = UDPSocket.recvfrom(bufferSize)
             origAddress, operation, resp_msg, num = decode(bytesAddressPair[0])
             if origAddress is not None:
-                print(origAddress, operation, resp_msg, num, curNum)
+                print(origAddress, operation, num)
                 if cons.isACK(operation):
-                    msg = encode(origAddress, resp_msg, cons.ACK, num)
+                    msg = encode(origAddress, '', cons.ACK, num)
                     UDPSocket.sendto(msg, server_address)
                     res = bytes.join(b'',response)
                     return res
@@ -58,7 +58,6 @@ def send(UDPSocket: socket.socket, origAddress, message_p:bytes,):
                     if (num+1)%16 > curNum:
                         return "error client worker connection broke"
                     else :
-                        print(curNum,num)
                         msg = encode(origAddress, resp_msg, cons.ACK, num)
                         UDPSocket.sendto(msg, server_address)
         except TimeoutError:
@@ -82,7 +81,7 @@ UDPClientSocket.settimeout(3.0)
 # Send to server using created UDP socket
 print("sending to server @",server_address)
 res = send(UDPClientSocket, UDPClientSocket.getsockname(),msgFromClient)
-print("recieved ack writing to",filename+"_client"+filetype,res)
+print("recieved ack writing to",filename+"_client"+filetype)
 
 file = open(filename+"_client"+filetype,'wb')
 file.write(res)
