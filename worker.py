@@ -1,9 +1,10 @@
 # based on https://pythontic.com/modules/socket/udp-client-server-example
 import socket
+from typing import List
 from encode import decode
 from encode import encode
+from worker_util import split, getFile
 import constants as cons
-
 
 def connect(UDPWorkerSocket: socket.socket, worker_adrs):
     msg = encode(worker_adrs, b'0', cons.WORKER,0)
@@ -32,14 +33,8 @@ def recieve(UDPWorkerSocket: socket.socket):
             continue
 
 
-def split(msg:str|bytes):
-
-    ThrdLen = int(len(msg)/3)
-    msg_arr = [msg[:ThrdLen],msg[ThrdLen:ThrdLen*2],msg[ThrdLen*2:]]
-    return msg_arr
-
 def respond(UDPWorkerSocket: socket.socket, origAddress, msg:str|bytes):    
-    response = split(msg)
+    response = split(cons.MAX_MSG_LENGTH,msg)
     for i in range(len(response)):
         sending = encode(origAddress, response[i], cons.RESP, i)
         while True:
@@ -68,7 +63,6 @@ def respond(UDPWorkerSocket: socket.socket, origAddress, msg:str|bytes):
             continue
 
 
-
 dockername = input("docker container name: ")
 
 server_address = ("pserver", 50000)
@@ -91,7 +85,9 @@ while (True):
         origAddress, op, message, num, address = recieve(UDPWorkerSocket)
         print(origAddress, op, message, address)
         if origAddress is not None and cons.isGet(op):
-            respond(UDPWorkerSocket, origAddress, message)
+            filename = message.decode()
+            content = getFile(filename)
+            respond(UDPWorkerSocket, origAddress, content)
         else:
             print("worker recived invalid message")
             msg = encode(origAddress, message, cons.REJ, num)

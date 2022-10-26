@@ -27,10 +27,10 @@ def send(UDPSocket: socket.socket, origAddress, message_p:bytes,):
             UDPSocket.sendto(msg, server_address)
             bytesAddressPair = UDPSocket.recvfrom(bufferSize)
             origAddress, operation, resp_msg, num = decode(bytesAddressPair[0])
-            print(origAddress, operation, resp_msg, num)
             if origAddress is not None:
                 if cons.isResp(operation):
                     if curNum == num:
+                        print(origAddress, operation, resp_msg, num)
                         response.append(resp_msg)
                         curNum = (curNum + 1)%16 
                         msg = encode(origAddress, resp_msg, cons.ACK, num)
@@ -44,8 +44,8 @@ def send(UDPSocket: socket.socket, origAddress, message_p:bytes,):
         try:
             bytesAddressPair = UDPSocket.recvfrom(bufferSize)
             origAddress, operation, resp_msg, num = decode(bytesAddressPair[0])
-            print(origAddress, operation, resp_msg, num)
             if origAddress is not None:
+                print(origAddress, operation, resp_msg, num)
                 if cons.isACK(operation):
                     msg = encode(origAddress, resp_msg, cons.ACK, num)
                     UDPSocket.sendto(msg, server_address)
@@ -55,7 +55,7 @@ def send(UDPSocket: socket.socket, origAddress, message_p:bytes,):
                     if curNum == num:
                         response.append(resp_msg)
                         curNum = (curNum + 1)%16 
-                    elif num<curNum:
+                    if num<curNum:
                         msg = encode(origAddress, resp_msg, cons.ACK, num)
                         UDPSocket.sendto(msg, server_address)
                     else :
@@ -63,7 +63,10 @@ def send(UDPSocket: socket.socket, origAddress, message_p:bytes,):
         except TimeoutError:
             continue
 
-msgFromClient       = "filename.txt"
+
+filename = "filename"
+filetype = ".txt"
+msgFromClient       = filename+filetype
 server_address   = ("pserver", 50000)
 bufferSize          = 1024
 
@@ -78,7 +81,11 @@ UDPClientSocket.settimeout(3.0)
 # Send to server using created UDP socket
 print("sending to server @",server_address)
 res = send(UDPClientSocket, UDPClientSocket.getsockname(),msgFromClient)
-print("recieved ack", res)
+print("recieved ack writing to",filename+"_client"+filetype)
+
+file = open(filename+"_client"+filetype,'w')
+file.write(res.decode())
+file.close()
 
 while(True):
     while True:
