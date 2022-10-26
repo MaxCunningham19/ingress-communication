@@ -45,7 +45,7 @@ def send(UDPSocket: socket.socket, origAddress, message_p:bytes,):
             bytesAddressPair = UDPSocket.recvfrom(bufferSize)
             origAddress, operation, resp_msg, num = decode(bytesAddressPair[0])
             if origAddress is not None:
-                print(origAddress, operation, resp_msg, num)
+                print(origAddress, operation, resp_msg, num, curNum)
                 if cons.isACK(operation):
                     msg = encode(origAddress, resp_msg, cons.ACK, num)
                     UDPSocket.sendto(msg, server_address)
@@ -55,17 +55,18 @@ def send(UDPSocket: socket.socket, origAddress, message_p:bytes,):
                     if curNum == num:
                         response.append(resp_msg)
                         curNum = (curNum + 1)%16 
-                    if num<curNum:
+                    if (num+1)%16 > curNum:
+                        return "error client worker connection broke"
+                    else :
+                        print(curNum,num)
                         msg = encode(origAddress, resp_msg, cons.ACK, num)
                         UDPSocket.sendto(msg, server_address)
-                    else :
-                        return "error client worker connection broke"
         except TimeoutError:
             continue
 
 
-filename = "filename"
-filetype = ".txt"
+filename = "image"
+filetype = ".png"
 msgFromClient       = filename+filetype
 server_address   = ("pserver", 50000)
 bufferSize          = 1024
@@ -81,10 +82,10 @@ UDPClientSocket.settimeout(3.0)
 # Send to server using created UDP socket
 print("sending to server @",server_address)
 res = send(UDPClientSocket, UDPClientSocket.getsockname(),msgFromClient)
-print("recieved ack writing to",filename+"_client"+filetype)
+print("recieved ack writing to",filename+"_client"+filetype,res)
 
-file = open(filename+"_client"+filetype,'w')
-file.write(res.decode())
+file = open(filename+"_client"+filetype,'wb')
+file.write(res)
 file.close()
 
 while(True):
