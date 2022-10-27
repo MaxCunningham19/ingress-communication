@@ -29,5 +29,14 @@ def isGet(s:str|None)->bool:
         return False
     return s==GET
 
+def isBusy(s:str|None)->bool:
+    if s is None:
+        return False
+    return s==BUSY
+
+def isRej(s:str|None)->bool:
+    if s is None:
+        return False
+    return s==REJ
 
 NOT_ADDRESS = ("0.0.0.0",0)

@@ -6,13 +6,14 @@ from encode import encode
 from worker_util import split, getFile
 import constants as cons
 
+
 def connect(UDPWorkerSocket: socket.socket, worker_adrs):
-    msg = encode(worker_adrs, b'0', cons.WORKER,0)
+    msg = encode(worker_adrs, b'0', cons.WORKER, 0)
     while True:
         UDPWorkerSocket.sendto(msg, server_address)
         try:
             bytesAddressPair = UDPWorkerSocket.recvfrom(bufferSize)
-            origAddress, operation, _ , _ = decode(bytesAddressPair[0])
+            origAddress, operation, _, _ = decode(bytesAddressPair[0])
             if origAddress is not None:
                 if cons.isACK(operation):
                     return
@@ -33,18 +34,18 @@ def recieve(UDPWorkerSocket: socket.socket):
             continue
 
 
-def respond(UDPWorkerSocket: socket.socket, origAddress, msg:str|bytes):    
-    response = split(cons.MAX_MSG_LENGTH,msg)
+def respond(UDPWorkerSocket: socket.socket, origAddress, msg: str | bytes):
+    response = split(cons.MAX_MSG_LENGTH, msg)
     for i in range(len(response)):
         sending = encode(origAddress, response[i], cons.RESP, i)
         while True:
             try:
                 UDPWorkerSocket.sendto(sending, server_address)
                 bytesAddressPair = UDPWorkerSocket.recvfrom(bufferSize)
-                origAdrs, oper, mes, num = decode(bytesAddressPair[0])
+                origAdrs, oper, _, num = decode(bytesAddressPair[0])
                 print(origAdrs, oper, num)
                 if origAdrs is not None:
-                    if cons.isACK(oper) and num == (i%16):
+                    if cons.isACK(oper) and num == (i % 16):
                         break
             except TimeoutError:
                 continue
@@ -57,7 +58,7 @@ def respond(UDPWorkerSocket: socket.socket, origAddress, msg:str|bytes):
             origAdrs, oper, mes, num = decode(bytesAddressPair[0])
             print(origAdrs, oper, num)
             if origAdrs is not None:
-                if cons.isACK(oper) and num==len(response)%16:
+                if cons.isACK(oper) and num == len(response) % 16:
                     return
         except TimeoutError:
             continue
@@ -65,14 +66,14 @@ def respond(UDPWorkerSocket: socket.socket, origAddress, msg:str|bytes):
 
 dockername = input("docker container name: ")
 
-server_address = ("pserver", 50000)
+server_address = ("server", 50000)
 bufferSize = 1024
 
 # Create a datagram socket
 UDPWorkerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 UDPWorkerSocket.bind((dockername, 0))
 UDPWorkerSocket.settimeout(3.0)
-print("Worker starting @ ", dockername, UDPWorkerSocket.getsockname()[1])
+print("Worker starting @ ", UDPWorkerSocket.getsockname())
 worker_adrs = (UDPWorkerSocket.getsockname())
 
 # connect to server
@@ -87,7 +88,12 @@ while (True):
         if origAddress is not None and cons.isGet(op):
             filename = message.decode()
             content = getFile(filename)
-            respond(UDPWorkerSocket, origAddress, content)
+            if content == b'':
+                print("file", filename, "cannot be opened")
+                msg = encode(origAddress, b'', cons.REJ, 0)
+                UDPWorkerSocket.sendto(msg, server_address)
+            else:
+                respond(UDPWorkerSocket, origAddress, content)
         else:
             print("worker recived invalid message")
             msg = encode(origAddress, message, cons.REJ, num)

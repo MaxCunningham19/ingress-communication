@@ -26,6 +26,9 @@ def split_str(max_len:int,msg:str):
     return msg_arr
 
 def getFile(filename:str):
-    file = open(filename,'rb')
-    fileContent = file.read()
-    return fileContent
+    try:
+        file = open(filename,'rb')
+        fileContent = file.read()
+        return fileContent
+    except:
+        return b''
