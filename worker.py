@@ -7,11 +7,25 @@ from worker_util import split, getFile
 import constants as cons
 
 
-def connect(UDPWorkerSocket: socket.socket, worker_adrs):
-    msg = encode(worker_adrs, b'0', cons.WORKER, 0)
+def connect(UDPWorkerSocket: socket.socket):
+    msg = encode(UDPWorkerSocket.getsockname(), b'0', cons.WORKER, 0)
     while True:
         UDPWorkerSocket.sendto(msg, server_address)
         try:
+            bytesAddressPair = UDPWorkerSocket.recvfrom(bufferSize)
+            origAddress, operation, _, _ = decode(bytesAddressPair[0])
+            if origAddress is not None:
+                if cons.isACK(operation):
+                    return
+        except TimeoutError:
+            continue
+
+
+def send_done(UDPWorkerSocket: socket.socket):
+    msg = encode(UDPWorkerSocket.getsockname(), b'0', cons.DONE, 0)
+    while True:
+        try:
+            UDPWorkerSocket.sendto(msg, server_address)
             bytesAddressPair = UDPWorkerSocket.recvfrom(bufferSize)
             origAddress, operation, _, _ = decode(bytesAddressPair[0])
             if origAddress is not None:
@@ -59,6 +73,7 @@ def respond(UDPWorkerSocket: socket.socket, origAddress, msg: str | bytes):
             print(origAdrs, oper, num)
             if origAdrs is not None:
                 if cons.isACK(oper) and num == len(response) % 16:
+                    send_done(UDPWorkerSocket)
                     return
         except TimeoutError:
             continue
@@ -77,7 +92,7 @@ print("Worker starting @ ", UDPWorkerSocket.getsockname())
 worker_adrs = (UDPWorkerSocket.getsockname())
 
 # connect to server
-connect(UDPWorkerSocket, worker_adrs)
+connect(UDPWorkerSocket)
 print("connected to server")
 
 # Listen for incoming datagrams
@@ -92,11 +107,14 @@ while (True):
                 print("file", filename, "cannot be opened")
                 msg = encode(origAddress, b'', cons.REJ, 0)
                 UDPWorkerSocket.sendto(msg, server_address)
+
             else:
                 respond(UDPWorkerSocket, origAddress, content)
+
         else:
             print("worker recived invalid message")
             msg = encode(origAddress, message, cons.REJ, num)
             UDPWorkerSocket.sendto(msg, address)
+
     except TimeoutError:
         continue
