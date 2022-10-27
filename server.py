@@ -27,8 +27,7 @@ print("UDP server up and listening @", UDPServerSocket.getsockname())
 
 # Listen for incoming datagrams
 while (True):
-    origAddress, input, message, num, address = recieve(UDPServerSocket,bufferSize)
-    origAddress = (socket.gethostbyname(origAddress[0]), origAddress[1])
+    input, message, num, address = recieve(UDPServerSocket,bufferSize)
     if message is not None:
         if cons.isAddWorker(input):
             if add_worker(workers, address):
@@ -36,7 +35,7 @@ while (True):
                 workerMsg = "Adding Worker " + \
                     address[0] + " : " + str(address[1])
                 print(workerMsg)
-            message = encode(origAddress, message, cons.ACK, num)
+            message = encode(message, cons.ACK, num)
             UDPServerSocket.sendto(message, address)
 
         elif cons.isGet(input):
@@ -45,18 +44,18 @@ while (True):
                 index = select_worker(workers)
                 if index == -1:
                     UDPServerSocket.sendto(
-                        encode(origAddress, message, cons.BUSY, num), address)
+                        encode(message, cons.BUSY, num), address)
 
                 else:
                     print("establishing connection between",
                           workers[index].address, "and", address)
                     UDPServerSocket.sendto(
-                        encode(origAddress, message, cons.GET, num), workers[index].address)
+                        encode(message, cons.GET, num), workers[index].address)
                     workers[index].busy = True
                     connections = add_pair(connections, address, workers[index].address)
             else:
                 UDPServerSocket.sendto(
-                        encode(origAddress, message, cons.REJ, num), address)
+                        encode(message, cons.REJ, num), address)
 
         elif cons.isDone(input):
             index = get_worker(workers, address)
@@ -64,17 +63,18 @@ while (True):
                 pair_index = pair_to_remove(connections,address)
                 if pair_index != -1:
                     print("closing connection between",
-                          workers[index].address, "and", address)
+                          connections[pair_index][1], "and", connections[pair_index][0])
                     del connections[pair_index]
-                UDPServerSocket.sendto(encode(origAddress, message, cons.ACK, num), address)
+                    workers[index].busy = False
+                UDPServerSocket.sendto(encode(message, cons.ACK, num), address)
             else:
-                UDPServerSocket.sendto(encode(origAddress, message, cons.REJ, num), address)
+                UDPServerSocket.sendto(encode(message, cons.REJ, num), address)
 
         else:
             pair_adrs = get_pair(connections, address)
             if pair_adrs is None:
-                UDPServerSocket.sendto(encode(origAddress, message, cons.REJ, num), address)
+                UDPServerSocket.sendto(encode(message, cons.REJ, num), address)
             else:
-                UDPServerSocket.sendto(encode(origAddress, message, input, num), pair_adrs)
+                UDPServerSocket.sendto(encode(message, input, num), pair_adrs)
     else:
         print("cannot handle recieved message")

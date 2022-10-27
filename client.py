@@ -7,41 +7,29 @@ from encode import encode
 from encode import decode
 
 
-def recieve(UDPSocket: socket.socket):
-    print("waiting to recieve messages")
-    while True:
-        try:
-            bytesAddressPair = UDPSocket.recvfrom(bufferSize)
-            byte_message = bytesAddressPair[0]
-            address = bytesAddressPair[1]
-            origAddress, input, message_decoded = decode(byte_message)
-            return origAddress, input, message_decoded, address
-        except TimeoutError:
-            continue
-
-
-def send(UDPSocket: socket.socket, origAddress, message_p: bytes,):
+def send(UDPSocket: socket.socket, message_p: bytes,):
     response: List[bytes] = []
     curNum = 0
     while True:
         try:
-            msg = encode(origAddress, message_p, cons.GET, curNum)
+            msg = encode(message_p, cons.GET, curNum)
             UDPSocket.sendto(msg, server_address)
 
             bytesAddressPair = UDPSocket.recvfrom(bufferSize)
-            origAddress, operation, resp_msg, num = decode(bytesAddressPair[0])
-            if origAddress is not None:
+            operation, num, resp_msg = decode(bytesAddressPair[0])
+            if operation is not None:
                 if cons.isRej(operation):
                     return b''
                 if cons.isResp(operation):
                     if curNum == num:
-                        print(origAddress, operation, num)
+                        print(operation, num)
                         response.append(resp_msg)
                         curNum = (curNum + 1) % 16
-                        msg = encode(origAddress, '', cons.ACK, num)
+                        msg = encode('', cons.ACK, num)
                         UDPSocket.sendto(msg, server_address)
                         break
                 if cons.isBusy(operation):
+                    print("server is busy client waiting...")
                     time.sleep(2)
 
         except TimeoutError:
@@ -50,11 +38,11 @@ def send(UDPSocket: socket.socket, origAddress, message_p: bytes,):
     while True:
         try:
             bytesAddressPair = UDPSocket.recvfrom(bufferSize)
-            origAddress, operation, resp_msg, num = decode(bytesAddressPair[0])
-            if origAddress is not None:
-                print(origAddress, operation, num)
+            operation, num, resp_msg = decode(bytesAddressPair[0])
+            if operation is not None:
+                print(operation, num)
                 if cons.isACK(operation):
-                    msg = encode(origAddress, '', cons.ACK, num)
+                    msg = encode('', cons.ACK, num)
                     UDPSocket.sendto(msg, server_address)
                     res = bytes.join(b'', response)
                     return res
@@ -65,7 +53,7 @@ def send(UDPSocket: socket.socket, origAddress, message_p: bytes,):
                     if (num+1) % 16 > curNum:
                         return "error client worker connection broke"
                     else:
-                        msg = encode(origAddress, resp_msg, cons.ACK, num)
+                        msg = encode(resp_msg, cons.ACK, num)
                         UDPSocket.sendto(msg, server_address)
         except TimeoutError:
             continue
@@ -87,7 +75,7 @@ while True:
 
     # Send to server using created UDP socket
     print("sending to server @", server_address)
-    res = send(UDPClientSocket, UDPClientSocket.getsockname(), filePath)
+    res = send(UDPClientSocket, filePath)
 
     if res != b'':
         print("recieved ack writing to", "client_"+filePath)
@@ -98,11 +86,11 @@ while True:
         while True:
             try:
                 bytesAddressPair = UDPClientSocket.recvfrom(bufferSize)
-                origAddress, operation, resp_msg, num = decode(bytesAddressPair[0])
-                print(origAddress, operation, resp_msg, num)
-                if origAddress is not None:
+                operation, num, resp_msg = decode(bytesAddressPair[0])
+                print(operation, resp_msg, num)
+                if operation is not None:
                     if cons.isACK(operation):
-                        msg = encode(origAddress, resp_msg, cons.ACK, num)
+                        msg = encode(resp_msg, cons.ACK, num)
                         UDPClientSocket.sendto(msg, server_address)
             except TimeoutError:
                 if time.time() - startTime > 5:

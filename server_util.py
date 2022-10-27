@@ -9,8 +9,8 @@ def recieve(UDPSocket: socket.socket, bufferSize:int):
             bytesAddressPair = UDPSocket.recvfrom(bufferSize)
             message = bytesAddressPair[0]
             address = bytesAddressPair[1]
-            origAddress, input, message, num = decode(message)
-            return origAddress, input, message, num, address
+            input, num, message = decode(message)
+            return input, message, num, address
         except TimeoutError:
             continue
 
